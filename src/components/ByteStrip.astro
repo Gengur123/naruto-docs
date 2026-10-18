@@ -1,0 +1,43 @@
+---
+// A struct's bytes, one cell per byte, coloured by field, padding hatched. Give it `rule`
+// and `fields` as a dataflow ledger entry has them; the layout code works out the rest.
+// mode="small" says what the pointer is on; mode="large" is the bare picture beside a
+// field list; mode="annotated" stands alone with a ruler, names where they fit, and the
+// size of each run of padding.
+// Without JavaScript the plain-text byte map stays.
+import './dd/dd-components.css';
+import { asciiAtBuild, layoutAtBuild } from './dd/build-time.js';
+
+interface Field {
+  name: string;
+  type: string;
+}
+interface Props {
+  id?: string;
+  /** c, std140, std430, scalar, wgsl or hlsl-cbuffer. */
+  rule: string;
+  fields: Field[];
+  /** Nested structs: a struct name to its fields. */
+  types?: Record<string, Field[]>;
+  /** `#pragma pack(n)`, rule c only. */
+  pack?: number;
+  mode?: 'small' | 'large' | 'annotated';
+}
+const { id = 'struct', rule, fields, types, pack, mode = 'small' } = Astro.props;
+const struct = { id, rule, fields, types, pack };
+const layout = layoutAtBuild(struct);
+---
+
+{
+  layout.error ? (
+    <pre class="dd-sc-err"><code>{`${id}: no layout under rule ${rule}\n${layout.error}`}</code></pre>
+  ) : (
+    <dd-bytes class="not-content" mode={mode} data-layout={JSON.stringify(layout)}>
+      <pre><code>{asciiAtBuild(struct)}</code></pre>
+    </dd-bytes>
+  )
+}
+
+<script>
+  import './dd/dd-bytes.js';
+</script>

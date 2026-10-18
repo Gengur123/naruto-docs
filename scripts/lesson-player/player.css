@@ -1,0 +1,142 @@
+/* player.css: the lesson player's own layout. It knows nothing about any one lesson.
+   It uses these colour tokens, which the lesson's theme.css defines:
+   --bg --panel --rule --ink --text --accent --font-body --font-num
+   One screen: stage and caption, a side area (the step's card, or the chapter list),
+   and one control bar. Nothing scrolls: a card taller than the side area is cut into pages. */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 16px/1.4 var(--font-body); overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.lp { height: 100%; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(15rem, 30vw, 23rem); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "main side" "bar bar"; background: var(--bg); }
+.lp-main { grid-area: main; display: grid; grid-template-rows: minmax(0, 1fr) auto; min-width: 0; min-height: 0; }
+.lp-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.lp-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.lp-stage canvas.grab { cursor: grab; }
+.lp-stage canvas.grabbing { cursor: grabbing; }
+
+.lp-capbox { padding: 6px 16px 10px; border-top: 1px solid var(--rule); min-width: 0; }
+.lp-eyebrow { margin: 0 0 2px; font: 600 0.72rem/1.4 var(--font-num); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-cap { margin: 0; color: var(--ink); font-size: 1.22rem; line-height: 1.3; min-height: 2.6em; text-wrap: balance; transition: opacity 0.18s ease; }
+.lp-cap.swap { opacity: 0; }
+
+.lp-term { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; text-decoration-color: var(--accent); }
+.lp-term:hover, .lp-term[aria-expanded="true"] { text-decoration-style: solid; color: var(--ink); }
+
+.lp-side { grid-area: side; min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); border-left: 1px solid var(--rule); background: var(--panel); }
+.lp-tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--rule); }
+.lp-tab { border: 0; background: none; padding: 6px 10px; min-height: 34px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text); }
+.lp-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.lp-pane { display: flex; flex-direction: column; overflow: hidden; padding: 8px 10px 6px; min-height: 0; }
+/* The card and the chapter list are one column as tall as the area; what does not fit flows into further
+   columns to the right, and the player shows one column at a time (its pages). */
+.lp-card, .lp-chapters { flex: 1 1 0; min-height: 0; overflow: hidden; padding: 2px 4px; column-count: 1; column-fill: auto; column-gap: 24px; }
+.lp-card { font-size: 0.9rem; line-height: 1.42; }
+.lp-card.lp-card > * + *, .lp-card > div:not(.lp-ctl) > * + * { margin-top: 8px; }
+.lp-ctl:empty { display: none; }
+.lp-card li, .lp-card tr, .lp-card h2, .lp-drag, .lp-ctl label, .lp-seg, .lp-chapters li { break-inside: avoid; }
+.lp-card p { orphans: 2; widows: 2; }
+.lp-pager { flex: none; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 4px; font: 0.76rem var(--font-num); color: var(--text); }
+.lp-pager button { width: 44px; height: 30px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--ink); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+.lp-pager button:disabled { opacity: 0.35; cursor: default; }
+.lp-card h2 { margin: 0; font-size: 1rem; line-height: 1.25; color: var(--ink); font-weight: 650; }
+.lp-card p, .lp-card ul, .lp-card table { margin: 0; }
+.lp-card b { color: var(--ink); font-weight: 600; }
+.lp-card .n { font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); font-size: 0.86em; overflow-wrap: anywhere; }
+.lp-card .sub { font-size: 0.8rem; }
+.lp-card ul { padding-left: 1.1rem; }
+.lp-card li + li { margin-top: 3px; }
+.lp-card table { border-collapse: collapse; font-size: 0.8rem; width: 100%; }
+.lp-card th, .lp-card td { padding: 2px 4px; text-align: left; border-bottom: 1px solid var(--rule); }
+.lp-card th { color: var(--ink); font-weight: 600; }
+.lp-card tr.lit td { background: color-mix(in srgb, var(--ink) 12%, transparent); color: var(--ink); font-weight: 600; }
+.lp-drag { font-size: 0.82rem; color: var(--ink); border: 1px dashed var(--rule); border-radius: 6px; padding: 5px 8px; }
+.lp-ctl { display: flex; flex-direction: column; gap: 8px; }
+.lp-ctl label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 0.82rem; }
+.lp-ctl input[type=range] { width: 100%; min-width: 0; accent-color: var(--ink); }
+.lp-ctl output { font-family: var(--font-num); color: var(--ink); min-width: 3ch; text-align: right; }
+.lp-seg { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: 0.82rem; }
+.lp-seg span { margin-right: 4px; }
+.lp-seg button { border: 1px solid var(--rule); background: var(--bg); border-radius: 6px; padding: 4px 9px; min-height: 30px; cursor: pointer; color: var(--ink); }
+.lp-seg button[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.lp-chapters { list-style: none; margin: 0; }
+.lp-chapters li + li { margin-top: 1px; }
+.lp-chapters button { width: 100%; display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto; gap: 6px; align-items: baseline; text-align: left; border: 0; background: none; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 0.86rem; color: var(--text); }
+.lp-chapters button:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.lp-chapters button[aria-current="true"] { color: var(--ink); font-weight: 600; background: color-mix(in srgb, var(--ink) 10%, transparent); }
+.lp-chapters i, .lp-chapters small { font: normal 0.74rem var(--font-num); color: var(--text); }
+
+.lp-bar { grid-area: bar; border-top: 1px solid var(--rule); background: var(--bg); padding: 4px 12px calc(6px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 2px; min-width: 0; }
+.lp-scrub { position: relative; height: 22px; cursor: pointer; touch-action: none; border-radius: 4px; }
+.lp-track { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 2px; background: var(--rule); }
+.lp-fill { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 2px; background: var(--ink); width: 0; }
+.lp-mark { position: absolute; top: 6px; width: 2px; height: 10px; margin-left: -1px; background: var(--bg); box-shadow: 0 0 0 1px var(--text); border-radius: 1px; }
+.lp-thumb { position: absolute; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--bg); }
+.lp-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lp-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 40px; height: 36px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; color: var(--ink); font-size: 0.82rem; }
+.lp-btn:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.lp-btn:disabled { opacity: 0.35; cursor: default; }
+.lp-btn[aria-pressed="true"] { border-color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.lp-btn svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+.lp-btn.lp-play { background: var(--ink); color: var(--bg); min-width: 46px; }
+.lp-btn.lp-play:hover { background: var(--ink); opacity: 0.88; }
+.lp-time { font: 0.8rem var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; margin-left: 4px; min-width: 0; overflow: hidden; }
+.lp-stepno { font: 0.76rem var(--font-num); color: var(--text); white-space: nowrap; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lp-space { flex: 1 1 0; min-width: 0; }
+.lp-speed { flex: none; height: 34px; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 0 4px; font: 0.82rem var(--font-num); cursor: pointer; }
+.lp-dots { display: inline-grid; grid-template-columns: repeat(5, 6px); gap: 2px; }
+.lp-dots i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+
+.lp-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; padding: 12px 22px 12px 16px; background: var(--ink); color: var(--bg); font-size: 1.05rem; font-weight: 600; cursor: pointer; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28); }
+.lp-big svg { width: 26px; height: 26px; fill: currentColor; }
+.lp-big small { font: 0.8rem var(--font-num); font-weight: 400; opacity: 0.8; }
+.lp-hint { position: absolute; left: 8px; top: 8px; max-width: calc(100% - 16px); font-size: 0.78rem; line-height: 1.25; color: var(--ink); background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px dashed var(--text); border-radius: 6px; padding: 3px 8px; pointer-events: none; }
+.lp-over { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 10px; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.lp-sheet { position: relative; width: min(100%, 30rem); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border: 1px solid var(--text); border-radius: 10px; padding: 12px 44px 12px 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); font-size: 0.92rem; line-height: 1.42; color: var(--ink); }
+.lp-sheet h2 { margin: 0 0 4px; font-size: 1.02rem; color: var(--ink); }
+.lp-sheet p { margin: 0 0 6px; }
+.lp-sheet small { display: block; font: 0.72rem/1.35 var(--font-num); color: var(--text); overflow-wrap: anywhere; }
+.lp-sheet a { color: var(--accent); }
+.lp-close { position: absolute; right: 6px; top: 6px; width: 34px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer; color: var(--ink); font-size: 1.2rem; line-height: 1; }
+.lp-close:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.lp-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 6px 14px; }
+.lp-legend li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 0.8rem; line-height: 1.3; }
+.lp-legend svg { display: block; }
+
+/* Upright or narrow screens: stage on top, the card under the caption, the bar at the bottom. */
+@media (max-width: 760px), (max-aspect-ratio: 9/10) {
+  .lp { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr) auto; grid-template-areas: "main" "side" "bar"; }
+  .lp-side { border-left: 0; border-top: 1px solid var(--rule); }
+  .lp-cap { font-size: 1.04rem; min-height: 2.6em; }
+  .lp-capbox { padding: 4px 12px 8px; }
+  .lp-stepno { display: none; }
+  .lp-tab { min-height: 30px; padding: 4px 10px; }
+  .lp-card h2.lp-same, .lp-card .lp-drag { display: none; }   /* both are already on screen: the line above the caption, and the hint on the stage */
+  .lp-pane { padding: 6px 8px 4px; }
+  .lp-bar { padding-inline: 8px; }
+}
+/* Small phones: the bar's seven things must fit in 320 pixels. */
+@media (max-width: 420px) {
+  .lp-row { gap: 2px; }
+  .lp-btn { min-width: 34px; padding: 0 5px; }
+  .lp-btn.lp-play { min-width: 40px; }
+  .lp-time { font-size: 0.74rem; margin-left: 2px; letter-spacing: -0.02em; }
+  .lp-speed { padding: 0; }
+  .lp-bar { padding-inline: 6px; }
+  .lp-card { font-size: 0.84rem; line-height: 1.36; }
+  .lp-card.lp-card > * + *, .lp-card > div:not(.lp-ctl) > * + * { margin-top: 6px; }
+}
+/* With the narration button the bar has eight things: on the smallest phones the buttons give way so the time stays whole. */
+@media (max-width: 350px) {
+  .lp-voiced .lp-btn { min-width: 28px; padding: 0 2px; }
+  .lp-voiced .lp-btn.lp-play { min-width: 36px; }
+  .lp-voiced .lp-dots { grid-template-columns: repeat(3, 6px); }
+  .lp-voiced .lp-time { margin-left: 0; }
+}
+@media (max-height: 520px) {
+  .lp-cap { font-size: 1rem; min-height: 1.3em; }
+  .lp-eyebrow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .lp-cap { transition: none; } }

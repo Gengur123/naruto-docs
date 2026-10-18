@@ -1,0 +1,293 @@
+---
+// A struct's byte layout, drawn through UsaGui.
+//
+// Give it `rule` and `fields` as a dataflow ledger entry has them (see
+// references/status-docs.md in the dandori skill). Sizes, offsets and padding are never
+// written by hand: the shared MoonBit layout code computes them, here while the site
+// builds for the caption, the table and the plain-text byte map, and again inside the
+// UsaGui guest in the browser for the drawing. Both are built from the same source, so
+// they cannot disagree. The built files are in ../lib/usagui-layout/; its README says
+// where they come from.
+//
+// Without JavaScript, or when the guest fails to load, the plain-text byte map stays.
+import { layout_ascii, layout_json } from '../lib/usagui-layout/kernel.js';
+
+interface Field {
+  name: string;
+  type: string;
+}
+interface Props {
+  /** The ledger entry's id, shown as the struct's name. */
+  id?: string;
+  /** c, std140, std430, scalar, wgsl or hlsl-cbuffer. */
+  rule: string;
+  fields: Field[];
+  /** Nested structs: a struct name to its fields. */
+  types?: Record<string, Field[]>;
+  /** `#pragma pack(n)`, rule c only. */
+  pack?: number;
+  /** Mount at once, not when scrolled near. Use it on pages a script captures. */
+  eager?: boolean;
+}
+const { id = 'struct', rule, fields, types, pack, eager = false } = Astro.props;
+
+const entry = JSON.stringify({ id, rule, fields, ...(types ? { types } : {}), ...(pack ? { pack } : {}) });
+const layout = JSON.parse(layout_json(entry));
+const failed: string | undefined = layout.error;
+const ascii = failed ? '' : layout_ascii(entry);
+
+// The letters of the plain-text map, in field order; keep them the same as the letters in
+// the built files (see their README). The colour of a field's key is a token of the shared
+// palette in src/styles/dandori.css, which holds the colours the built drawing paints.
+const symbols = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const PALETTE_SIZE = 10;
+
+const caption = failed
+  ? ''
+  : `${layout.id}: rule ${layout.rule}, ${layout.size} bytes, align ${layout.align}, ${layout.wasted} wasted (${layout.tail_padding} at the end)`;
+const reordered = failed ? undefined : layout.reordered;
+const reorderLine = !reordered
+  ? ''
+  : reordered.recoverable > 0
+    ? `${reordered.size} bytes if ordered ${reordered.order.join(', ')}: ${reordered.recoverable} of the ${layout.wasted} wasted bytes are recoverable.`
+    : 'No field order is smaller.';
+---
+
+{
+  failed ? (
+    <pre class="dd-ul-error"><code>{`${id}: no layout under rule ${rule}\n${failed}`}</code></pre>
+  ) : (
+    <usagui-struct-layout data-entry={entry} data-size={layout.size} data-mount={eager ? 'eager' : 'visible'}>
+      <figure>
+        <figcaption>{caption}</figcaption>
+        <div class="dd-ul-stage" hidden>
+          <canvas role="img" aria-label={`Byte layout of ${layout.id}, one cell per byte. The table below lists every field.`} />
+          <div class="dd-ul-tip" data-tip hidden />
+        </div>
+        <pre class="dd-ul-text" data-fallback><code>{ascii}</code></pre>
+        <p class="dd-ul-note" data-cut hidden />
+        <table>
+          <thead>
+            <tr>
+              <th>map</th>
+              <th>field</th>
+              <th>type</th>
+              <th>offset</th>
+              <th>size</th>
+              <th>align</th>
+              <th>padding before</th>
+            </tr>
+          </thead>
+          <tbody>
+            {layout.fields.map((f: any, i: number) => (
+              <tr>
+                <td>
+                  <span class="dd-ul-key" style={`background:var(--dd-field-${i % PALETTE_SIZE})`}>
+                    {symbols[i % symbols.length]}
+                  </span>
+                </td>
+                <td>{f.name}</td>
+                <td>{f.type}</td>
+                <td>{f.offset}</td>
+                <td>{f.size}</td>
+                <td>{f.align}</td>
+                <td>{f.padding_before}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {reorderLine && <p class="dd-ul-note">{reorderLine}</p>}
+        {layout.notes.map((note: string) => <p class="dd-ul-note">Note: {note}</p>)}
+      </figure>
+    </usagui-struct-layout>
+  )
+}
+
+<style>
+  usagui-struct-layout {
+    display: block;
+  }
+  [hidden] {
+    display: none !important;
+  }
+  figure {
+    margin-inline: 0;
+  }
+  figcaption {
+    font-weight: 600;
+  }
+  .dd-ul-stage {
+    position: relative;
+    margin-top: 0.5rem;
+  }
+  canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    cursor: crosshair;
+  }
+  .dd-ul-tip {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    max-width: 100%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-black);
+    color: var(--sl-color-white);
+    font: 0.75rem/1.4 var(--sl-font-mono, ui-monospace, monospace);
+    white-space: pre-wrap;
+  }
+  .dd-ul-text,
+  .dd-ul-error {
+    overflow-x: auto;
+  }
+  .dd-ul-key {
+    display: inline-block;
+    min-width: 1.5em;
+    border-radius: 0.2em;
+    text-align: center;
+    font-family: var(--sl-font-mono, ui-monospace, monospace);
+    color: var(--dd-cell-ink);
+  }
+  .dd-ul-note {
+    font-size: var(--sl-text-sm, 0.875rem);
+  }
+</style>
+
+<script>
+  // One copy of the guest per page; each widget gets its own Gui from the factory.
+  let guest: Promise<any> | undefined;
+  const loadGuest = () => (guest ??= import('../lib/usagui-layout/island.js'));
+
+  // Cell pitch and outer padding of the guest's drawing (CELL_W and PAD in guest.mbt):
+  // 16 bytes per row need this many CSS pixels, and a narrower column gets 8 per row.
+  const WIDE = 8 * 2 + 22 * 16;
+
+  const isDark = () => document.documentElement.dataset.theme !== 'light' &&
+    (document.documentElement.dataset.theme === 'dark' || matchMedia('(prefers-color-scheme: dark)').matches);
+
+  class UsaguiStructLayout extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.mount === 'eager' || !('IntersectionObserver' in globalThis)) return void this.mount();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer.disconnect();
+          void this.mount();
+        },
+        { rootMargin: '256px' },
+      );
+      observer.observe(this);
+    }
+
+    // Any failure leaves the plain-text byte map in place and says why on the element.
+    async mount() {
+      try {
+        const module = await loadGuest();
+        this.start(module);
+      } catch (error) {
+        this.dataset.failed = String(error);
+      }
+    }
+
+    start(module: any) {
+      const stage = this.querySelector<HTMLElement>('.dd-ul-stage')!;
+      const canvas = this.querySelector('canvas')!;
+      const tip = this.querySelector<HTMLElement>('[data-tip]')!;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('no 2D canvas');
+      const perRow = this.clientWidth >= WIDE ? 16 : 8;
+      const made = module.usagui_struct_layout_create(
+        this.dataset.entry ?? '',
+        perRow,
+        (
+          address: bigint,
+          frame: (x: number, y: number, dark: boolean) => number,
+          length: () => number,
+          tooltip: (cell: number) => string,
+          width: number,
+          height: number,
+          shown: number,
+        ) => {
+          const present = () => {
+            // Schema-v3 POD frame: lane 1 is the solid rectangles, f32 x, y, w, h and a
+            // u32 colour whose bytes are R, G, B, A.
+            const pod = (globalThis as any).__liteSpacePodBuffers.get(Number(address >> 32n));
+            const view = new DataView(pod.buffer, Number(address & 0xffffffffn), length());
+            if (view.getUint32(0, true) !== 0x44504755 || view.getUint32(4, true) !== 3) {
+              throw new Error('not a schema-v3 UsaGui frame');
+            }
+            const count = view.getUint32(32, true);
+            const offset = view.getUint32(92, true);
+            const stride = view.getUint32(152, true);
+            const scale = globalThis.devicePixelRatio || 1;
+            if (canvas.width !== Math.round(width * scale)) {
+              canvas.width = Math.round(width * scale);
+              canvas.height = Math.round(height * scale);
+            }
+            context.setTransform(scale, 0, 0, scale, 0, 0);
+            context.clearRect(0, 0, width, height);
+            for (let i = 0; i < count; i++) {
+              const at = offset + i * stride;
+              const colour = view.getUint32(at + 16, true);
+              context.fillStyle = `rgba(${colour & 255},${(colour >> 8) & 255},${(colour >> 16) & 255},${(colour >>> 24) / 255})`;
+              context.fillRect(view.getFloat32(at, true), view.getFloat32(at + 4, true), view.getFloat32(at + 8, true), view.getFloat32(at + 12, true));
+            }
+          };
+          // The last pointer position in the guest's units, so a theme change can redraw.
+          let px = -1;
+          let py = -1;
+          const draw = () => {
+            const cell = frame(px, py, isDark());
+            if (cell === -2) throw new Error('the UsaGui frame raised');
+            present();
+            this.dataset.hovered = String(cell);
+            return cell;
+          };
+          const point = (event: PointerEvent) => {
+            const box = canvas.getBoundingClientRect();
+            px = ((event.clientX - box.left) * width) / box.width;
+            py = ((event.clientY - box.top) * height) / box.height;
+            const cell = draw();
+            tip.hidden = cell < 0;
+            if (cell < 0) return;
+            tip.textContent = tooltip(cell);
+            const around = stage.getBoundingClientRect();
+            tip.style.left = `${Math.max(0, Math.min(event.clientX - around.left + 12, around.width - tip.offsetWidth))}px`;
+            tip.style.top = `${event.clientY - around.top + 18}px`;
+          };
+          const leave = () => {
+            px = -1;
+            py = -1;
+            draw();
+            tip.hidden = true;
+          };
+          canvas.style.width = `${width}px`;
+          draw();
+          // Only now, with a frame on the canvas, does the drawing replace the text.
+          stage.hidden = false;
+          this.querySelector<HTMLElement>('[data-fallback]')!.hidden = true;
+          const size = Number(this.dataset.size);
+          if (shown < size) {
+            const cut = this.querySelector<HTMLElement>('[data-cut]')!;
+            cut.textContent = `The drawing shows the first ${shown} of ${size} bytes.`;
+            cut.hidden = false;
+          }
+          canvas.addEventListener('pointermove', point);
+          canvas.addEventListener('pointerdown', point);
+          canvas.addEventListener('pointerleave', leave);
+          canvas.addEventListener('pointercancel', leave);
+          new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+          matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+          this.dataset.shown = String(shown);
+          this.dataset.perRow = String(perRow);
+          this.dataset.ready = '';
+        },
+      );
+      if (!made) throw new Error('the guest could not lay the struct out');
+    }
+  }
+  if (!customElements.get('usagui-struct-layout')) customElements.define('usagui-struct-layout', UsaguiStructLayout);
+</script>

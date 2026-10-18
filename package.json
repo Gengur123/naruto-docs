@@ -1,0 +1,29 @@
+{
+  "name": "dandori-docs",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "node --test glossify.test.mjs scripts/live-args.test.mjs dd-components.test.mjs dd-pick.test.mjs scripts/search.test.mjs scripts/file-explanation.test.mjs scripts/build-lesson.test.mjs scripts/narrate.test.mjs",
+    "live": "node scripts/live.mjs",
+    "live:window": "node scripts/live.mjs --window",
+    "live:stop": "node scripts/live.mjs --stop",
+    "window:check": "node scripts/live.mjs --check",
+    "search": "node scripts/search.mjs",
+    "build-lesson": "node scripts/build-lesson.mjs",
+    "narrate": "node scripts/narrate.mjs",
+    "file-explanation": "node scripts/file-explanation.mjs"
+  },
+  "dependencies": {
+    "@astrojs/markdown-satteri": "0.4.2",
+    "@astrojs/starlight": "0.42.4",
+    "astro": "7.3.5",
+    "satteri": "0.10.5"
+  },
+  "devDependencies": {
+    "electrobun": "2.0.2"
+  }
+}

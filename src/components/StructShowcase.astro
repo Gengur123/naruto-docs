@@ -1,0 +1,155 @@
+---
+// The struct layout showcase: the result first, and each view expands in place into its
+// bigger picture. Hand it structs as data, as a dataflow ledger entry has them, and the
+// commit and date the page was taken at. See tools/components on the site.
+//
+// One struct is drawn as it is. Several structs, or a ledger, get the picker: a search box
+// with a grouped list, the chosen structs side by side, and under each the places where
+// its name appears.
+//
+// Sizes and offsets are never written by hand. The MoonBit layout code works them out,
+// here while the site builds and again in the browser when a field is edited. An entry
+// whose layout its source does not fix is listed with its fields and no numbers.
+// Without JavaScript the page shows the numbers, byte map and field list of the structs
+// that start in view.
+import './dd/dd-components.css';
+import siteLedger from '../../ledgers/dataflow.json';
+import { asciiAtBuild, engineUrl, layoutsAtBuild } from './dd/build-time.js';
+import { annotate, describe, entryOf } from './dd/dd-annotate.js';
+import { mayDraw, slim } from './dd/dd-pick.js';
+
+interface Field {
+  name: string;
+  type: string;
+}
+interface Struct {
+  id: string;
+  /** c, std140, std430, scalar, wgsl or hlsl-cbuffer; unfixed when the source fixes no layout. */
+  rule: string;
+  fields: Field[];
+  /** Nested structs: a struct name to its fields. */
+  types?: Record<string, Field[]>;
+  /** `#pragma pack(n)`, rule c only. */
+  pack?: number;
+  /** `repr(align(n))`. */
+  align?: number;
+}
+interface Props {
+  /** One struct or several. With `ledger` they are the group "examples". */
+  structs?: Struct | Struct[];
+  /** `true` for the site's own ledgers/dataflow.json, or a list of its entries. */
+  ledger?: boolean | Struct[];
+  /** The ids in view when the page opens. Default: the first struct that may be drawn. */
+  open?: string[];
+  /** The folder the scan read, said above the structs in view. Default: the folders the scanned entries' paths share. */
+  scanned?: string;
+  /** The commit the entry was taken at. */
+  commit?: string;
+  /** The date the entry was taken, as 2026-10-11. */
+  date?: string;
+}
+const { structs: given = [], ledger, open, scanned: scannedFolder, commit, date } = Astro.props;
+const structs = Array.isArray(given) ? given : [given];
+const scanned: any[] = ledger === true ? (siteLedger as any[]) : Array.isArray(ledger) ? ledger : [];
+const picker = Boolean(ledger) || structs.length > 1;
+// In the picker, the page's own structs keep the commit and date of the page; a scanned
+// entry has only the date the scan added it.
+const entries: any[] = picker
+  ? [...scanned.map(slim), ...structs.map((struct) => ({ ...struct, ...(ledger ? { group: 'examples' } : {}), commit, date }))]
+  : structs;
+const first = entries.find(mayDraw) ?? entries[0];
+const shown: any[] = picker ? (open ?? (first ? [first.id] : [])).map((id) => entries.find((entry) => entry.id === id)).filter(Boolean) : entries;
+const drawn = shown.filter(mayDraw);
+const layouts = drawn.map((struct) => layoutsAtBuild(entryOf(struct)));
+// JSON inside a script element: nothing in it may close the element or open a comment.
+const held = JSON.stringify(entries).replace(/</g, '\\u003c');
+---
+
+{
+  picker ? (
+    <dd-struct-picker
+      class="not-content"
+      data-open={JSON.stringify(shown.map((entry) => entry.id))}
+      data-layouts={JSON.stringify(Object.fromEntries(drawn.map((struct, at) => [struct.id, layouts[at]])))}
+      engine={engineUrl()}
+      scanned={scannedFolder}
+      commit={ledger ? undefined : commit}
+      date={ledger ? undefined : date}
+    >
+      <script type="application/json" is:inline set:html={held} />
+      <p>
+        {`${entries.length} structs. A byte layout is drawn for ${entries.filter(mayDraw).length} of them. Searching and adding structs to the view needs JavaScript.`}
+        {scanned.length > 0 && ' The DataflowTracker page lists the scanned ones.'}
+      </p>
+      {
+    drawn.map((struct, at) => {
+      const { declared, reordered, error } = layouts[at] as any;
+      return error ? (
+        <pre class="dd-sc-err"><code>{`${struct.id}: no layout under rule ${struct.rule}
+${error}`}</code></pre>
+      ) : (
+        <figure>
+          <figcaption>
+            {describe(declared)}
+            {reordered && ` ${reordered.size} bytes if ordered ${declared.reordered.order.join(', ')}.`}
+          </figcaption>
+          <pre><code>{asciiAtBuild(entryOf(struct))}</code></pre>
+          <ul>
+            {annotate(declared).map((row: any) =>
+              row.kind === 'pad' ? (
+                <li>{`padding: offset ${row.offset}, size ${row.size}, ${row.reason}`}</li>
+              ) : (
+                <li>{`${row.letter} ${row.name}: ${row.type}, offset ${row.offset}, size ${row.size}, align ${row.align}`}</li>
+              ),
+            )}
+          </ul>
+        </figure>
+      );
+    })
+  }
+      {(commit || date) && <p>{[commit && `commit ${commit}`, date].filter(Boolean).join(' · ')}</p>}
+    </dd-struct-picker>
+  ) : (
+    <dd-struct-showcase
+      class="not-content"
+      data-structs={JSON.stringify(structs)}
+      data-layouts={JSON.stringify(layouts)}
+      engine={engineUrl()}
+      commit={commit}
+      date={date}
+    >
+      {
+    drawn.map((struct, at) => {
+      const { declared, reordered, error } = layouts[at] as any;
+      return error ? (
+        <pre class="dd-sc-err"><code>{`${struct.id}: no layout under rule ${struct.rule}
+${error}`}</code></pre>
+      ) : (
+        <figure>
+          <figcaption>
+            {describe(declared)}
+            {reordered && ` ${reordered.size} bytes if ordered ${declared.reordered.order.join(', ')}.`}
+          </figcaption>
+          <pre><code>{asciiAtBuild(entryOf(struct))}</code></pre>
+          <ul>
+            {annotate(declared).map((row: any) =>
+              row.kind === 'pad' ? (
+                <li>{`padding: offset ${row.offset}, size ${row.size}, ${row.reason}`}</li>
+              ) : (
+                <li>{`${row.letter} ${row.name}: ${row.type}, offset ${row.offset}, size ${row.size}, align ${row.align}`}</li>
+              ),
+            )}
+          </ul>
+        </figure>
+      );
+    })
+  }
+      {(commit || date) && <p>{[commit && `commit ${commit}`, date].filter(Boolean).join(' · ')}</p>}
+    </dd-struct-showcase>
+  )
+}
+
+<script>
+  import './dd/engine-kernel.js';
+  import './dd/dd-struct-picker.js';
+</script>

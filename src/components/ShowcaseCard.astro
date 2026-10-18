@@ -1,0 +1,33 @@
+---
+// A showcase card with a small state and an expanded state. It grows in place on a click,
+// Enter or Space, and collapses on Escape or its Collapse button. It knows nothing about
+// what is inside it. Slots: `small` (only while small), the default slot (both states),
+// `large` (only while expanded). Without JavaScript all three are shown.
+import './dd/dd-components.css';
+
+interface Props {
+  /** Names the card, on the card and for a screen reader ("Expand <label>"). */
+  label: string;
+  /** Start expanded. */
+  open?: boolean;
+}
+const { label, open = false } = Astro.props;
+---
+
+<dd-card class="not-content" label={label} {...(open ? { open: true } : {})}>
+  <div class="dd-card-tag">{label}</div>
+  <div data-dd-small><slot name="small" /></div>
+  <slot />
+  <div data-dd-large><slot name="large" /></div>
+</dd-card>
+
+<style is:global>
+  /* Until the element is defined (no JavaScript), a card shows both of its states. */
+  dd-card:not(:defined) [data-dd-large] {
+    display: block !important;
+  }
+</style>
+
+<script>
+  import './dd/dd-card.js';
+</script>

@@ -1,0 +1,74 @@
+---
+// The list beside a byte strip: one row per field and one per run of padding, in byte
+// order, with offset, size, alignment and what forces each run of padding. On its own it
+// is read-only; inside StructShowcase the same element is the editor.
+import './dd/dd-components.css';
+import { layoutAtBuild } from './dd/build-time.js';
+import { annotate } from './dd/dd-annotate.js';
+
+interface Field {
+  name: string;
+  type: string;
+}
+interface Props {
+  id?: string;
+  /** c, std140, std430, scalar, wgsl or hlsl-cbuffer. */
+  rule: string;
+  fields: Field[];
+  /** Nested structs: a struct name to its fields. */
+  types?: Record<string, Field[]>;
+  /** `#pragma pack(n)`, rule c only. */
+  pack?: number;
+}
+const { id = 'struct', rule, fields, types, pack } = Astro.props;
+const layout = layoutAtBuild({ id, rule, fields, types, pack });
+const rows = layout.error ? [] : annotate(layout);
+---
+
+{
+  layout.error ? (
+    <pre class="dd-sc-err"><code>{`${id}: no layout under rule ${rule}\n${layout.error}`}</code></pre>
+  ) : (
+    <dd-fields class="not-content" data-layout={JSON.stringify(layout)}>
+      <table class="dd-fields-table">
+        <thead>
+          <tr>
+            <th />
+            <th scope="col">field</th>
+            <th scope="col">type</th>
+            <th scope="col" class="dd-n">offset</th>
+            <th scope="col" class="dd-n">size</th>
+            <th scope="col" class="dd-n">align</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row: any) =>
+            row.kind === 'pad' ? (
+              <tr class="dd-fields-p">
+                <td />
+                <td>padding</td>
+                <td>{row.reason}</td>
+                <td class="dd-n">{row.offset}</td>
+                <td class="dd-n">{row.size}</td>
+                <td />
+              </tr>
+            ) : (
+              <tr class="dd-fields-f">
+                <td>{row.letter}</td>
+                <td>{row.name}</td>
+                <td>{row.type}</td>
+                <td class="dd-n">{row.offset}</td>
+                <td class="dd-n">{row.size}</td>
+                <td class="dd-n">{row.align}</td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </table>
+    </dd-fields>
+  )
+}
+
+<script>
+  import './dd/dd-fields.js';
+</script>

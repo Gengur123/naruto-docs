@@ -1,0 +1,140 @@
+/* dd-tokens:start
+   The one palette for a struct's bytes, and the surface colours of the showcase components.
+   Field n is drawn in --dd-field-(n mod 10) wherever a struct appears: the showcase
+   components (src/components/dd), StructLayout.astro and public/dd-layout.js. The ten
+   field colours are the ones the UsaGui drawing paints (src/lib/usagui-layout/island.js),
+   so change them there too or the canvas and its table disagree. Text on a field colour
+   is --dd-cell-ink in both themes. A standalone page copies this block as it is. */
+:root {
+  --dd-field-0: #7aa6d6; --dd-field-1: #f2a35e; --dd-field-2: #7cc27a; --dd-field-3: #ee8a8b; --dd-field-4: #c3a0d8;
+  --dd-field-5: #7fcfc7; --dd-field-6: #ecd166; --dd-field-7: #f7aec2; --dd-field-8: #c0a08a; --dd-field-9: #a9c7a0;
+  --dd-cell-ink: #1d1c1a;
+  --dd-pad-a: #dedbd3; --dd-pad-b: #c3bfb4;
+  --dd-surface: #fbfaf7; --dd-panel: #ffffff; --dd-ink: #1d1c1a; --dd-mute: #6b6860; --dd-line: #e4e1d9;
+  --dd-good: #2f7d3a; --dd-bad: #b4472f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --dd-pad-a: #2a2c31; --dd-pad-b: #4a4c52;
+    --dd-surface: #16171a; --dd-panel: #1d1f23; --dd-ink: #e9e7e2; --dd-mute: #9a978f; --dd-line: #2c2e33;
+    --dd-good: #7cc27a; --dd-bad: #ee8a8b;
+  }
+}
+:root[data-theme='dark'] {
+  --dd-pad-a: #2a2c31; --dd-pad-b: #4a4c52;
+  --dd-surface: #16171a; --dd-panel: #1d1f23; --dd-ink: #e9e7e2; --dd-mute: #9a978f; --dd-line: #2c2e33;
+  --dd-good: #7cc27a; --dd-bad: #ee8a8b;
+}
+/* dd-tokens:end */
+
+/* Dandori status colours. Every colour sits beside a word in the page text, never alone.
+   Starlight has no yellow token, so orange stands in for yellow. The -low and -high tokens
+   are swapped by Starlight for dark and light themes, so one rule serves both. */
+
+.dd-red, .dd-yellow, .dd-green, .dd-stale, .dd-state {
+  display: inline-block;
+  padding: 0 0.55em;
+  border: 1px solid var(--dd-edge, currentColor);
+  border-radius: 0.4em;
+  background: var(--dd-bg, transparent);
+  color: var(--dd-fg, inherit);
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.dd-red    { --dd-bg: var(--sl-color-red-low);    --dd-fg: var(--sl-color-red-high);    --dd-edge: var(--sl-color-red); }
+.dd-yellow { --dd-bg: var(--sl-color-orange-low); --dd-fg: var(--sl-color-orange-high); --dd-edge: var(--sl-color-orange); }
+.dd-green  { --dd-bg: var(--sl-color-green-low);  --dd-fg: var(--sl-color-green-high);  --dd-edge: var(--sl-color-green); }
+
+/* A stale entry: grey, and the text is struck through so the old number cannot be read as current. */
+.dd-stale {
+  --dd-bg: var(--sl-color-gray-6);
+  --dd-fg: var(--sl-color-gray-3);
+  --dd-edge: var(--sl-color-gray-4);
+  text-decoration: line-through;
+}
+
+/* Track states. Both spellings work: `dd-state dd-state-merged` and `dd-state merged`. */
+.dd-state-planned, .dd-state.planned {
+  --dd-bg: var(--sl-color-gray-6); --dd-fg: var(--sl-color-gray-2); --dd-edge: var(--sl-color-gray-4);
+}
+.dd-state-in-progress, .dd-state.in-progress {
+  --dd-bg: var(--sl-color-blue-low); --dd-fg: var(--sl-color-blue-high); --dd-edge: var(--sl-color-blue);
+}
+.dd-state-adversarial, .dd-state.adversarial {
+  --dd-bg: var(--sl-color-purple-low); --dd-fg: var(--sl-color-purple-high); --dd-edge: var(--sl-color-purple);
+}
+.dd-state-in-review, .dd-state.in-review {
+  --dd-bg: var(--sl-color-orange-low); --dd-fg: var(--sl-color-orange-high); --dd-edge: var(--sl-color-orange);
+}
+.dd-state-ready-to-merge, .dd-state.ready-to-merge {
+  --dd-bg: transparent; --dd-fg: var(--sl-color-green-high); --dd-edge: var(--sl-color-green);
+  border-width: 2px;
+}
+.dd-state-merged, .dd-state.merged {
+  --dd-bg: var(--sl-color-green-low); --dd-fg: var(--sl-color-green-high); --dd-edge: var(--sl-color-green);
+}
+.dd-state-held, .dd-state.held {
+  --dd-bg: var(--sl-color-red-low); --dd-fg: var(--sl-color-red-high); --dd-edge: var(--sl-color-red);
+}
+
+/* Glossary links with a tooltip made of CSS only: the brief is in data-brief and is shown on
+   hover and on keyboard focus. The link is a real anchor, so Tab reaches it. */
+a.dd-gloss {
+  position: relative;
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+a.dd-gloss::after {
+  content: attr(data-brief);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.4em);
+  z-index: 10;
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: 0.4em 0.7em;
+  border: 1px solid var(--sl-color-gray-4);
+  border-radius: 0.4em;
+  background: var(--sl-color-black);
+  color: var(--sl-color-white);
+  font-size: var(--sl-text-sm);
+  font-weight: 400;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: normal;
+  box-shadow: var(--sl-shadow-md, 0 4px 12px rgb(0 0 0 / 0.3));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+a.dd-gloss:hover::after,
+a.dd-gloss:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Glossary page. */
+.dd-glossary dt { font-weight: 700; margin-top: 1rem; scroll-margin-top: 5rem; }
+.dd-glossary dt:target { outline: 2px solid var(--sl-color-accent); outline-offset: 0.2em; }
+.dd-glossary dd { margin: 0.2rem 0 0; }
+
+/* Struct layout widget (public/dd-layout.js): one cell per byte, in the palette above. */
+.dd-layout { margin: 1rem 0; }
+.dd-layout pre { margin: 0; }
+.dd-bytes { display: flex; flex-wrap: wrap; gap: 2px; margin: 0.5rem 0; }
+.dd-byte {
+  width: 1.6rem; height: 1.6rem;
+  display: grid; place-items: center;
+  border-radius: 3px;
+  background: var(--dd-c);
+  color: var(--dd-cell-ink);
+  font: 0.65rem/1 var(--sl-font-mono);
+  cursor: default;
+}
+.dd-byte-pad { background: repeating-linear-gradient(45deg, var(--dd-pad-a) 0 3px, var(--dd-pad-b) 3px 5px); }
+.dd-layout-tip { min-height: 1.5em; font: 0.85rem var(--sl-font-mono); }

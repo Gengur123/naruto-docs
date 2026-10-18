@@ -1,0 +1,48 @@
+---
+title: Struct layouts drawn with UsaGui
+description: Two example structs, one cell per byte, drawn and hit-tested by UsaGui.
+sidebar:
+  order: 3
+---
+
+import StructLayout from '../../../components/StructLayout.astro';
+
+Each drawing below has one cell per byte. A field's bytes share a colour; a padding byte is a faint cell with a bar in it. Hover a cell, or tap it, for the field's name, type, offset, size and alignment.
+
+The offsets come from the same MoonBit code as `dandori layout`. The cells are declared, hit-tested and coloured by UsaGui, running as a JavaScript guest that loads only when a drawing scrolls near. If the guest does not load, the byte map stays as text: a letter per field and a dot per byte of padding.
+
+## Rule c: padding that a new field order recovers
+
+`Particle` is 24 bytes, and 10 of them are padding: 7 so that `id` starts at a multiple of 8, and 3 so that `mass` starts at a multiple of 4. Ordered `id`, `mass`, `flags`, `kind` it is 16 bytes.
+
+<StructLayout id="sim.Particle" rule="c" fields={[
+  { name: 'flags', type: 'u8' },
+  { name: 'id', type: 'u64' },
+  { name: 'kind', type: 'u8' },
+  { name: 'mass', type: 'f32' },
+]} />
+
+## Rule std140: a vec3 followed by a float
+
+Under std140 a `vec3f` is 12 bytes aligned to 16, so the `f32` after it sits in bytes 12 to 15 and costs nothing. The second `vec3f` has no float after it, and the struct ends with 4 bytes of padding.
+
+<StructLayout id="light.Uniforms" rule="std140" fields={[
+  { name: 'direction', type: 'vec3f' },
+  { name: 'intensity', type: 'f32' },
+  { name: 'color', type: 'vec3f' },
+]} />
+
+## Using it on a page
+
+```mdx
+import StructLayout from '../../../components/StructLayout.astro';
+
+<StructLayout id="render.VertexGpu" rule="c" fields={[
+  { name: 'pos', type: 'vec3f' },
+  { name: 'flags', type: 'u8' },
+]} />
+```
+
+`rule` and `fields` are the two keys of a dataflow ledger entry. Write the types; never write sizes or offsets. `types` takes nested structs and `pack` takes a `#pragma pack` value, as the command does. Add `eager` on a page that a script captures, so the drawing does not wait to be scrolled near.
+
+The drawing is already built in. Two built files under `src/lib/usagui-layout/` hold it, and nothing else has to be installed or built for it to appear. Their sources are not in this folder; `src/lib/usagui-layout/README.md` says where they come from.

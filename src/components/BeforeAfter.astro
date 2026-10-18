@@ -1,0 +1,27 @@
+---
+// A before and after figure: one big number, an arrow, the number after.
+// Leave `to` out and it shows one number. See tools/components on the site.
+import './dd/dd-components.css';
+
+interface Props {
+  from: number | string;
+  to?: number | string;
+  /** Written small after each number: bytes, ms, allocations. */
+  unit?: string;
+  /** One short line of names and numbers beside the figure. */
+  note?: string;
+}
+const { from, to, unit, note } = Astro.props;
+const changed = to != null && String(to) !== String(from);
+---
+
+<dd-delta class="not-content" from={String(from)} to={changed ? String(to) : undefined} unit={unit} note={note}>
+  <span class="dd-delta-n">{from}{unit && <small>{unit}</small>}</span>
+  {changed && <span class="dd-delta-arrow" aria-hidden="true">→</span>}
+  {changed && <span class="dd-delta-n dd-delta-to">{to}{unit && <small>{unit}</small>}</span>}
+  {note && <span class="dd-delta-note">{note}</span>}
+</dd-delta>
+
+<script>
+  import './dd/dd-delta.js';
+</script>

@@ -1,0 +1,26 @@
+/* theme.css: this lesson's colours, light and dark.
+   The player needs --bg --panel --rule --ink --text --accent --font-body --font-num.
+   --left, --right and --mix are this lesson's own; lesson.js names them in `tokens`. */
+:root {
+  --bg: #FAFAF7;
+  --panel: #F3F3EE;
+  --rule: #D9D9D0;
+  --ink: #1B1F24;
+  --text: #5E6163;
+  --accent: #1D5FD1;
+  --left: #1D5FD1;
+  --right: #C25E00;
+  --mix: #1E7D32;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171A; --panel: #1A1E22; --rule: #2E343A; --ink: #F2F4F7; --text: #AFB2B5;
+    --accent: #74A9FF; --left: #74A9FF; --right: #FFA94D; --mix: #69DB7C; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171A; --panel: #1A1E22; --rule: #2E343A; --ink: #F2F4F7; --text: #AFB2B5;
+  --accent: #74A9FF; --left: #74A9FF; --right: #FFA94D; --mix: #69DB7C; color-scheme: dark;
+}

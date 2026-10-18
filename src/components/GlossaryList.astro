@@ -1,0 +1,17 @@
+---
+// The glossary index, rendered from ledgers/glossary.json. Each term gets an id equal to the
+// anchor the glossary plugin links to, so a linked term can never point at nothing.
+import glossary from '../../ledgers/glossary.json';
+import { slugOf } from '../../glossify.mjs';
+
+const entries = [...glossary].sort((a, b) => a.term.localeCompare(b.term));
+---
+
+<dl class="dd-glossary">
+  {entries.map((e) => (
+    <>
+      <dt id={slugOf(e.term)}>{e.term}</dt>
+      <dd>{e.brief}{e.aliases?.length ? ` Also: ${e.aliases.join(', ')}.` : ''}</dd>
+    </>
+  ))}
+</dl>

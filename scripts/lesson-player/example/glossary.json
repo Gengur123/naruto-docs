@@ -1,0 +1,4 @@
+[
+  { "term": "weight", "plain": "A number from 0 to 1 that says how much of one value to take. The other value gets what is left, so the two shares add up to 1." },
+  { "term": "blend", "plain": "One value made from two: each is multiplied by its share and the two results are added." }
+]
